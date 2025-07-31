@@ -124,86 +124,182 @@ export const VoiceAssistant = ({ onTicketCreated }: VoiceAssistantProps) => {
   };
 
   const handleTicketCreation = async (userText: string, aiResponse: string) => {
+    console.log('Processing user text for ticket creation:', userText);
+    console.log('AI Response:', aiResponse);
+    
     // Check if this is a child's input
-    const childKeywords = ['monster', 'toy', 'mommy', 'daddy', 'play', 'game'];
+    const childKeywords = ['monster', 'toy', 'mommy', 'daddy', 'play', 'game', 'batman', 'spiderman'];
     const isChildInput = childKeywords.some(keyword => 
       userText.toLowerCase().includes(keyword)
     ) || aiResponse.toLowerCase().includes("child's input");
 
     if (isChildInput) {
-      return; // Don't create ticket for child input
+      console.log('Child input detected, not creating ticket');
+      return;
     }
 
-    // Extract building and problem from user text
-    const buildingMatch = userText.match(/building\s+([a-zA-Z0-9]+)/i);
-    const hasBuilding = buildingMatch || /building/i.test(userText);
+    // Extract building information (more flexible patterns)
+    const buildingPatterns = [
+      /building\s+([a-zA-Z0-9]+)/i,
+      /in\s+building\s+([a-zA-Z0-9]+)/i,
+      /at\s+building\s+([a-zA-Z0-9]+)/i,
+      /from\s+building\s+([a-zA-Z0-9]+)/i
+    ];
     
-    // Check if it's a maintenance request
-    const maintenanceKeywords = ['broken', 'not working', 'leaking', 'leak', 'fix', 'repair', 'ac', 'air conditioner', 'heater', 'light', 'electrical', 'plumbing', 'elevator', 'fan'];
-    const hasProblem = maintenanceKeywords.some(keyword => 
+    let buildingMatch = null;
+    for (const pattern of buildingPatterns) {
+      buildingMatch = userText.match(pattern);
+      if (buildingMatch) break;
+    }
+
+    // Extract complaint/problem information
+    const problemKeywords = [
+      'broken', 'not working', 'leaking', 'leak', 'fix', 'repair', 
+      'ac', 'air conditioner', 'heater', 'light', 'lights', 
+      'electrical', 'plumbing', 'elevator', 'fan', 'toilet',
+      'door', 'window', 'heating', 'cooling', 'internet', 'wifi',
+      'computer', 'printer', 'projector', 'issue', 'problem'
+    ];
+    
+    const hasProblem = problemKeywords.some(keyword => 
       userText.toLowerCase().includes(keyword)
     );
 
-    if (hasBuilding && hasProblem && !aiResponse.toLowerCase().includes("cannot be created")) {
-      // Extract building name
-      const building = buildingMatch ? buildingMatch[1] : "Unknown";
+    console.log('Building match:', buildingMatch);
+    console.log('Has problem:', hasProblem);
+    console.log('AI response includes cannot be created:', aiResponse.toLowerCase().includes("cannot be created"));
+
+    // Only create ticket if we have both building and problem, and AI doesn't say it can't be created
+    if (buildingMatch && hasProblem && !aiResponse.toLowerCase().includes("cannot be created")) {
+      console.log('Creating ticket...');
       
-      // Determine priority
-      let priority = "P4";
-      if (/leak|fire|gas|emergency/i.test(userText)) priority = "P1";
-      else if (/ac|air conditioner|heating|electrical|power/i.test(userText)) priority = "P2";
-      else if (/light|internet|wifi/i.test(userText)) priority = "P3";
+      // Extract building name
+      const buildingName = buildingMatch[1].toUpperCase();
+      
+      // Create a simplified complaint description
+      let complaint = userText.trim();
+      
+      // Determine priority based on keywords
+      let priority = "P4"; // Default
+      const userTextLower = userText.toLowerCase();
+      
+      if (/leak|leaking|fire|gas|emergency|flood|electrical\s+shock/i.test(userText)) {
+        priority = "P1"; // Critical
+      } else if (/ac|air\s+conditioner|heating|heater|electrical|power|elevator/i.test(userText)) {
+        priority = "P2"; // High
+      } else if (/light|lights|internet|wifi|computer/i.test(userText)) {
+        priority = "P3"; // Medium
+      }
+
+      console.log('Determined priority:', priority);
 
       // Get available technician
-      const { data: technicians } = await supabase
+      const { data: technicians, error: techError } = await supabase
         .from('technicians')
         .select('*')
         .eq('status', 'available')
         .limit(1);
 
+      if (techError) {
+        console.error('Error fetching technicians:', techError);
+        return;
+      }
+
       const technician = technicians?.[0];
+      console.log('Available technician:', technician);
 
       if (technician) {
-        // Create ticket
+        // Create ticket data
+        const currentDate = new Date().toLocaleDateString('en-US', {
+          year: 'numeric',
+          month: '2-digit',
+          day: '2-digit'
+        });
+
         const ticketData = {
-          complaint: userText.trim(),
-          building: `Building ${building.toUpperCase()}`,
-          date: new Date().toLocaleDateString(),
-          priority,
+          complaint: complaint,
+          building: `Building ${buildingName}`,
+          date: currentDate,
+          priority: priority,
           technician_id: technician.id,
           technician_name: technician.name,
           status: 'open'
         };
 
-        const { error } = await supabase
+        console.log('Inserting ticket:', ticketData);
+
+        // Insert ticket into database
+        const { data: insertedTicket, error: insertError } = await supabase
           .from('tickets')
-          .insert(ticketData);
+          .insert(ticketData)
+          .select()
+          .single();
 
-        if (!error) {
-          // Update technician status
-          await supabase
-            .from('technicians')
-            .update({ status: 'busy' })
-            .eq('id', technician.id);
-
-          const successMessage = `Ticket created successfully with priority ${priority}. Technician ${technician.name} has been assigned.`;
+        if (insertError) {
+          console.error('Error creating ticket:', insertError);
+          const errorMessage = "Sorry, I couldn't create the ticket. Please try again.";
           
           setMessages(prev => [...prev, {
             id: Date.now().toString(),
             type: 'assistant',
-            text: successMessage,
+            text: errorMessage,
             timestamp: new Date()
           }]);
           
-          speakText(successMessage);
-          onTicketCreated();
-          
-          toast({
-            title: "Ticket Created",
-            description: `Priority ${priority} ticket assigned to ${technician.name}`,
-          });
+          speakText(errorMessage);
+          return;
         }
+
+        console.log('Ticket created successfully:', insertedTicket);
+
+        // Update technician status to busy
+        const { error: updateError } = await supabase
+          .from('technicians')
+          .update({ status: 'busy' })
+          .eq('id', technician.id);
+
+        if (updateError) {
+          console.error('Error updating technician status:', updateError);
+        }
+
+        // Create success message
+        const successMessage = `Ticket created successfully! Priority ${priority} issue in ${ticketData.building}. Technician ${technician.name} has been assigned and will arrive shortly.`;
+        
+        setMessages(prev => [...prev, {
+          id: Date.now().toString(),
+          type: 'assistant',
+          text: successMessage,
+          timestamp: new Date()
+        }]);
+        
+        speakText(successMessage);
+        
+        // Trigger UI refresh
+        onTicketCreated();
+        
+        toast({
+          title: "Ticket Created Successfully! 🎫",
+          description: `${priority} priority - Assigned to ${technician.name}`,
+        });
+
+      } else {
+        console.log('No available technicians');
+        const noTechMessage = "All technicians are currently busy. Your request has been noted and a technician will be assigned soon.";
+        
+        setMessages(prev => [...prev, {
+          id: Date.now().toString(),
+          type: 'assistant',
+          text: noTechMessage,
+          timestamp: new Date()
+        }]);
+        
+        speakText(noTechMessage);
       }
+    } else {
+      console.log('Ticket not created - missing required information');
+      console.log('Building found:', !!buildingMatch);
+      console.log('Problem found:', hasProblem);
+      console.log('AI says cannot create:', aiResponse.toLowerCase().includes("cannot be created"));
     }
   };
 
