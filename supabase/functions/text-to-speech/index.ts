@@ -5,13 +5,22 @@ const corsHeaders = {
   'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
 };
 
+console.log('Text-to-speech function started');
+
 serve(async (req) => {
+  console.log('Received request:', req.method, req.url);
+  
   if (req.method === 'OPTIONS') {
+    console.log('Handling CORS preflight');
     return new Response('ok', { headers: corsHeaders });
   }
 
   try {
-    const { text } = await req.json();
+    const body = await req.text();
+    console.log('Request body:', body);
+    
+    const { text } = JSON.parse(body);
+    console.log('Parsed text:', text);
     
     if (!text) {
       throw new Error('Text is required');

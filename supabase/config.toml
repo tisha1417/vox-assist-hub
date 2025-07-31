@@ -1,1 +1,7 @@
 project_id = "lghewicehmxikrhntfey"
+
+[functions.text-to-speech]
+verify_jwt = false
+
+[functions.chat-with-ai]
+verify_jwt = false

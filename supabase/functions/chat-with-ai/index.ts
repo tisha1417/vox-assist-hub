@@ -8,8 +8,13 @@ const corsHeaders = {
   'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
 };
 
+console.log('Chat-with-AI function started', openAIApiKey ? 'with API key' : 'without API key');
+
 serve(async (req) => {
+  console.log('Received request:', req.method, req.url);
+  
   if (req.method === 'OPTIONS') {
+    console.log('Handling CORS preflight');
     return new Response(null, { headers: corsHeaders });
   }
 
