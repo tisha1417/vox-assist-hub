@@ -1,7 +1,7 @@
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { Settings } from "lucide-react";
-import { VoiceAssistant } from "@/components/VoiceAssistant";
+import { SilentVoiceListener } from "@/components/SilentVoiceListener";
 import { TechnicianHub } from "@/components/TechnicianHub";
 import { MaintenanceSchedule } from "@/components/MaintenanceSchedule";
 import { ThemeToggle } from "@/components/ThemeToggle";
@@ -12,6 +12,23 @@ const Index = () => {
   const handleTicketCreated = () => {
     setRefreshTrigger(prev => prev + 1);
   };
+
+  useEffect(() => {
+    // Add Omnidim widget script
+    const script = document.createElement('script');
+    script.id = 'omnidimension-web-widget';
+    script.async = true;
+    script.src = 'https://backend.omnidim.io/web_widget.js?secret_key=8383815ea9bb72db2932a8acbd836c8d';
+    document.head.appendChild(script);
+
+    return () => {
+      // Cleanup script on unmount
+      const existingScript = document.getElementById('omnidimension-web-widget');
+      if (existingScript) {
+        existingScript.remove();
+      }
+    };
+  }, []);
 
   return (
     <div className="min-h-screen bg-background text-foreground">
@@ -34,11 +51,11 @@ const Index = () => {
 
       {/* Main Content */}
       <div className="container mx-auto px-4 py-8 space-y-8">
-        {/* Voice Assistant and Technician Hub Row */}
-        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-          <VoiceAssistant onTicketCreated={handleTicketCreated} />
-          <TechnicianHub refreshTrigger={refreshTrigger} />
-        </div>
+        {/* Silent Voice Listener - no UI */}
+        <SilentVoiceListener onTicketCreated={handleTicketCreated} />
+        
+        {/* Technician Hub - Full Width */}
+        <TechnicianHub refreshTrigger={refreshTrigger} />
 
         {/* Maintenance Schedule */}
         <MaintenanceSchedule refreshTrigger={refreshTrigger} />
