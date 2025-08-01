@@ -20,9 +20,14 @@ serve(async (req) => {
 
   try {
     const { message } = await req.json();
-
     console.log('Processing message:', message);
 
+    if (!openAIApiKey) {
+      console.error('OpenAI API key is not configured');
+      throw new Error('OpenAI API key is not configured');
+    }
+
+    console.log('Making request to OpenAI...');
     const response = await fetch('https://api.openai.com/v1/chat/completions', {
       method: 'POST',
       headers: {
@@ -55,6 +60,7 @@ serve(async (req) => {
     });
 
     console.log('OpenAI response status:', response.status);
+    console.log('OpenAI response headers:', Object.fromEntries(response.headers.entries()));
 
     if (!response.ok) {
       const errorText = await response.text();
@@ -62,23 +68,43 @@ serve(async (req) => {
       throw new Error(`OpenAI API error: ${response.status} - ${errorText}`);
     }
 
-    const data = await response.json();
-    console.log('OpenAI response data:', JSON.stringify(data, null, 2));
+    const responseText = await response.text();
+    console.log('Raw OpenAI response:', responseText);
 
-    if (!data.choices || !data.choices[0] || !data.choices[0].message) {
-      console.error('Invalid OpenAI response structure:', data);
-      throw new Error('Invalid response structure from OpenAI');
+    let data;
+    try {
+      data = JSON.parse(responseText);
+    } catch (parseError) {
+      console.error('Failed to parse OpenAI response:', parseError);
+      throw new Error('Invalid JSON response from OpenAI');
+    }
+
+    console.log('Parsed OpenAI response data:', JSON.stringify(data, null, 2));
+
+    if (!data.choices || !Array.isArray(data.choices) || data.choices.length === 0) {
+      console.error('No choices in OpenAI response:', data);
+      throw new Error('No choices returned from OpenAI');
+    }
+
+    if (!data.choices[0].message || !data.choices[0].message.content) {
+      console.error('Invalid message structure in OpenAI response:', data.choices[0]);
+      throw new Error('Invalid message structure from OpenAI');
     }
 
     const aiResponse = data.choices[0].message.content;
+    console.log('AI Response:', aiResponse);
 
     return new Response(JSON.stringify({ response: aiResponse }), {
       headers: { ...corsHeaders, 'Content-Type': 'application/json' },
     });
   } catch (error) {
     console.error('Error in chat-with-ai function:', error);
-    return new Response(JSON.stringify({ error: error.message }), {
-      status: 500,
+    console.error('Error stack:', error.stack);
+    
+    // Return a fallback response instead of an error to prevent the voice assistant from breaking
+    const fallbackResponse = "Thank you for your request. Please describe the issue and which building it's in.";
+    
+    return new Response(JSON.stringify({ response: fallbackResponse }), {
       headers: { ...corsHeaders, 'Content-Type': 'application/json' },
     });
   }
