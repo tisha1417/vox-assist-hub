@@ -90,7 +90,16 @@ export const VoiceAssistant = ({ onTicketCreated }: VoiceAssistantProps) => {
         body: JSON.stringify({ message: userText }),
       });
 
+      if (!response.ok) {
+        throw new Error(`API call failed with status: ${response.status}`);
+      }
+
       const data = await response.json();
+      
+      if (data.error) {
+        throw new Error(data.error);
+      }
+      
       const aiResponse = data.response;
 
       // Add AI response to messages
@@ -131,7 +140,7 @@ export const VoiceAssistant = ({ onTicketCreated }: VoiceAssistantProps) => {
     const childKeywords = ['monster', 'toy', 'mommy', 'daddy', 'play', 'game', 'batman', 'spiderman'];
     const isChildInput = childKeywords.some(keyword => 
       userText.toLowerCase().includes(keyword)
-    ) || aiResponse.toLowerCase().includes("child's input");
+    ) || (aiResponse && aiResponse.toLowerCase().includes("child's input"));
 
     if (isChildInput) {
       console.log('Child input detected, not creating ticket');
@@ -167,10 +176,10 @@ export const VoiceAssistant = ({ onTicketCreated }: VoiceAssistantProps) => {
 
     console.log('Building match:', buildingMatch);
     console.log('Has problem:', hasProblem);
-    console.log('AI response includes cannot be created:', aiResponse.toLowerCase().includes("cannot be created"));
+    console.log('AI response includes cannot be created:', aiResponse && aiResponse.toLowerCase().includes("cannot be created"));
 
     // Only create ticket if we have both building and problem, and AI doesn't say it can't be created
-    if (buildingMatch && hasProblem && !aiResponse.toLowerCase().includes("cannot be created")) {
+    if (buildingMatch && hasProblem && !(aiResponse && aiResponse.toLowerCase().includes("cannot be created"))) {
       console.log('Creating ticket...');
       
       // Extract building name
@@ -299,7 +308,7 @@ export const VoiceAssistant = ({ onTicketCreated }: VoiceAssistantProps) => {
       console.log('Ticket not created - missing required information');
       console.log('Building found:', !!buildingMatch);
       console.log('Problem found:', hasProblem);
-      console.log('AI says cannot create:', aiResponse.toLowerCase().includes("cannot be created"));
+      console.log('AI says cannot create:', aiResponse && aiResponse.toLowerCase().includes("cannot be created"));
     }
   };
 

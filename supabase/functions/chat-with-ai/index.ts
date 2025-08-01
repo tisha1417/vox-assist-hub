@@ -21,6 +21,8 @@ serve(async (req) => {
   try {
     const { message } = await req.json();
 
+    console.log('Processing message:', message);
+
     const response = await fetch('https://api.openai.com/v1/chat/completions', {
       method: 'POST',
       headers: {
@@ -52,7 +54,22 @@ serve(async (req) => {
       }),
     });
 
+    console.log('OpenAI response status:', response.status);
+
+    if (!response.ok) {
+      const errorText = await response.text();
+      console.error('OpenAI API error:', errorText);
+      throw new Error(`OpenAI API error: ${response.status} - ${errorText}`);
+    }
+
     const data = await response.json();
+    console.log('OpenAI response data:', JSON.stringify(data, null, 2));
+
+    if (!data.choices || !data.choices[0] || !data.choices[0].message) {
+      console.error('Invalid OpenAI response structure:', data);
+      throw new Error('Invalid response structure from OpenAI');
+    }
+
     const aiResponse = data.choices[0].message.content;
 
     return new Response(JSON.stringify({ response: aiResponse }), {
