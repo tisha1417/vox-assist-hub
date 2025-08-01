@@ -102,17 +102,20 @@ export const VoiceAssistant = ({ onTicketCreated }: VoiceAssistantProps) => {
       
       const aiResponse = data.response;
 
-      // Add AI response to messages
-      const assistantMessage = {
-        id: Date.now().toString(),
-        type: 'assistant' as const,
-        text: aiResponse,
-        timestamp: new Date()
-      };
-      setMessages(prev => [...prev, assistantMessage]);
+      // Don't show the generic fallback message
+      if (aiResponse !== "Thank you for your request. Please describe the issue and which building it's in.") {
+        // Add AI response to messages
+        const assistantMessage = {
+          id: Date.now().toString(),
+          type: 'assistant' as const,
+          text: aiResponse,
+          timestamp: new Date()
+        };
+        setMessages(prev => [...prev, assistantMessage]);
 
-      // Speak the response
-      speakText(aiResponse);
+        // Speak the response
+        speakText(aiResponse);
+      }
 
       // Check if we should create a ticket
       await handleTicketCreation(userText, aiResponse);
@@ -176,10 +179,9 @@ export const VoiceAssistant = ({ onTicketCreated }: VoiceAssistantProps) => {
 
     console.log('Building match:', buildingMatch);
     console.log('Has problem:', hasProblem);
-    console.log('AI response includes cannot be created:', aiResponse && aiResponse.toLowerCase().includes("cannot be created"));
 
-    // Only create ticket if we have both building and problem, and AI doesn't say it can't be created
-    if (buildingMatch && hasProblem && !(aiResponse && aiResponse.toLowerCase().includes("cannot be created"))) {
+    // Only create ticket if we have both building and problem
+    if (buildingMatch && hasProblem) {
       console.log('Creating ticket...');
       
       // Extract building name
@@ -246,16 +248,6 @@ export const VoiceAssistant = ({ onTicketCreated }: VoiceAssistantProps) => {
 
         if (insertError) {
           console.error('Error creating ticket:', insertError);
-          const errorMessage = "Sorry, I couldn't create the ticket. Please try again.";
-          
-          setMessages(prev => [...prev, {
-            id: Date.now().toString(),
-            type: 'assistant',
-            text: errorMessage,
-            timestamp: new Date()
-          }]);
-          
-          speakText(errorMessage);
           return;
         }
 
@@ -271,29 +263,24 @@ export const VoiceAssistant = ({ onTicketCreated }: VoiceAssistantProps) => {
           console.error('Error updating technician status:', updateError);
         }
 
-        // Create success message
-        const successMessage = `Ticket created successfully! Priority ${priority} issue in ${ticketData.building}. Technician ${technician.name} has been assigned and will arrive shortly.`;
+        // Create simple acknowledgment message without mentioning ticket creation
+        const acknowledgmentMessage = `Issue noted for ${ticketData.building}. Technician ${technician.name} will handle this.`;
         
         setMessages(prev => [...prev, {
           id: Date.now().toString(),
           type: 'assistant',
-          text: successMessage,
+          text: acknowledgmentMessage,
           timestamp: new Date()
         }]);
         
-        speakText(successMessage);
+        speakText(acknowledgmentMessage);
         
-        // Trigger UI refresh
+        // Trigger UI refresh silently
         onTicketCreated();
-        
-        toast({
-          title: "Ticket Created Successfully! 🎫",
-          description: `${priority} priority - Assigned to ${technician.name}`,
-        });
 
       } else {
         console.log('No available technicians');
-        const noTechMessage = "All technicians are currently busy. Your request has been noted and a technician will be assigned soon.";
+        const noTechMessage = "All technicians are currently busy. Your request has been noted.";
         
         setMessages(prev => [...prev, {
           id: Date.now().toString(),
@@ -308,7 +295,6 @@ export const VoiceAssistant = ({ onTicketCreated }: VoiceAssistantProps) => {
       console.log('Ticket not created - missing required information');
       console.log('Building found:', !!buildingMatch);
       console.log('Problem found:', hasProblem);
-      console.log('AI says cannot create:', aiResponse && aiResponse.toLowerCase().includes("cannot be created"));
     }
   };
 

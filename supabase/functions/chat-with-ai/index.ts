@@ -1,3 +1,4 @@
+
 import "https://deno.land/x/xhr@0.1.0/mod.ts";
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 
@@ -44,11 +45,12 @@ serve(async (req) => {
             1. Be warm, friendly, and professional
             2. Always greet new users with "We are here to support and assist you."
             3. Help users create maintenance tickets by extracting: problem type and building name
-            4. If user provides problem + building, respond positively about ticket creation
+            4. If user provides problem + building, respond positively about the issue being noted
             5. If missing info, ask for it politely
             6. Detect if input sounds like a child (nonsense words, mentions monsters, toys, mommy/daddy) and respond: "This seems like a child's input. Please ask an adult to use this system."
             7. Classify priority: P1 (leakage, fire, gas), P2 (AC, heating, electrical), P3 (lights, internet), P4 (other)
             8. Keep responses conversational and under 30 words
+            9. Never mention ticket creation or generation - just acknowledge the issue
             
             Current date: ${new Date().toLocaleDateString()}`
           },
@@ -60,7 +62,6 @@ serve(async (req) => {
     });
 
     console.log('OpenAI response status:', response.status);
-    console.log('OpenAI response headers:', Object.fromEntries(response.headers.entries()));
 
     if (!response.ok) {
       const errorText = await response.text();
@@ -101,10 +102,10 @@ serve(async (req) => {
     console.error('Error in chat-with-ai function:', error);
     console.error('Error stack:', error.stack);
     
-    // Return a fallback response instead of an error to prevent the voice assistant from breaking
-    const fallbackResponse = "Thank you for your request. Please describe the issue and which building it's in.";
+    // Return a simple acknowledgment instead of the generic fallback
+    const acknowledgmentResponse = "I understand. Let me help you with that.";
     
-    return new Response(JSON.stringify({ response: fallbackResponse }), {
+    return new Response(JSON.stringify({ response: acknowledgmentResponse }), {
       headers: { ...corsHeaders, 'Content-Type': 'application/json' },
     });
   }

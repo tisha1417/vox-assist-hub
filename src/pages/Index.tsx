@@ -1,3 +1,4 @@
+
 import { useState } from "react";
 import { Settings } from "lucide-react";
 import { VoiceAssistant } from "@/components/VoiceAssistant";
@@ -36,7 +37,7 @@ const Index = () => {
         {/* Voice Assistant and Technician Hub Row */}
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
           <VoiceAssistant onTicketCreated={handleTicketCreated} />
-          <TechnicianHub />
+          <TechnicianHub refreshTrigger={refreshTrigger} />
         </div>
 
         {/* Maintenance Schedule */}

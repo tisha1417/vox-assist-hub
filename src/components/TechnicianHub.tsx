@@ -1,3 +1,4 @@
+
 import { useState, useEffect } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
@@ -11,12 +12,16 @@ interface Technician {
   created_at: string;
 }
 
-export const TechnicianHub = () => {
+interface TechnicianHubProps {
+  refreshTrigger?: number;
+}
+
+export const TechnicianHub = ({ refreshTrigger }: TechnicianHubProps) => {
   const [technicians, setTechnicians] = useState<Technician[]>([]);
 
   useEffect(() => {
     fetchTechnicians();
-  }, []);
+  }, [refreshTrigger]);
 
   const fetchTechnicians = async () => {
     const { data, error } = await supabase
