@@ -18,7 +18,7 @@ const Index = () => {
     const script = document.createElement('script');
     script.id = 'omnidimension-web-widget';
     script.async = true;
-    script.src = 'https://backend.omnidim.io/web_widget.js?secret_key=8383815ea9bb72db2932a8acbd836c8d';
+    script.src = 'https://backend.omnidim.io/web_widget.js?secret_key=a18fd9396019519a1181f82f8837e495';
     document.head.appendChild(script);
 
     return () => {
