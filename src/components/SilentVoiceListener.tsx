@@ -168,28 +168,19 @@ export const SilentVoiceListener = ({ onTicketCreated }: SilentVoiceListenerProp
       console.log('Available technician:', technician);
 
       if (technician) {
-        // Create ticket data
-        const currentDate = new Date().toLocaleDateString('en-US', {
-          year: 'numeric',
-          month: '2-digit',
-          day: '2-digit'
-        });
-
+        // Create ticket data for maintenance_tickets table
         const ticketData = {
-          complaint: complaint,
-          building: `Building ${buildingName}`,
-          date: currentDate,
-          priority: priority,
-          technician_id: technician.id,
-          technician_name: technician.name,
-          status: 'open'
+          issue_description: complaint,
+          apartment_number: `Building ${buildingName}`,
+          priority_level: priority,
+          technician_name: technician.name
         };
 
         console.log('Inserting ticket:', ticketData);
 
-        // Insert ticket into database with retry logic
+        // Insert ticket into maintenance_tickets table
         const { data: insertedTicket, error: insertError } = await supabase
-          .from('tickets')
+          .from('maintenance_tickets')
           .insert(ticketData)
           .select()
           .single();
