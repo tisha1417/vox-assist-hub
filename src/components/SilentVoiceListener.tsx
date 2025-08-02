@@ -187,7 +187,7 @@ export const SilentVoiceListener = ({ onTicketCreated }: SilentVoiceListenerProp
 
         console.log('Inserting ticket:', ticketData);
 
-        // Insert ticket into database
+        // Insert ticket into database with retry logic
         const { data: insertedTicket, error: insertError } = await supabase
           .from('tickets')
           .insert(ticketData)
@@ -196,6 +196,8 @@ export const SilentVoiceListener = ({ onTicketCreated }: SilentVoiceListenerProp
 
         if (insertError) {
           console.error('Error creating ticket:', insertError);
+          console.error('Error details:', insertError.message);
+          console.error('Error code:', insertError.code);
           return;
         }
 
