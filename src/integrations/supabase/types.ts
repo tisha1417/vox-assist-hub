@@ -14,6 +14,87 @@ export type Database = {
   }
   public: {
     Tables: {
+      contact: {
+        Row: {
+          "created_at=": string
+          id: string
+          name: string | null
+          phone_number: string | null
+          user_id: string | null
+        }
+        Insert: {
+          "created_at="?: string
+          id?: string
+          name?: string | null
+          phone_number?: string | null
+          user_id?: string | null
+        }
+        Update: {
+          "created_at="?: string
+          id?: string
+          name?: string | null
+          phone_number?: string | null
+          user_id?: string | null
+        }
+        Relationships: []
+      }
+      emergency_contacts: {
+        Row: {
+          created_at: string
+          id: string
+          name: string
+          phone_number: string
+          relationship: string | null
+          updated_at: string
+          user_id: string | null
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          name: string
+          phone_number: string
+          relationship?: string | null
+          updated_at?: string
+          user_id?: string | null
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          name?: string
+          phone_number?: string
+          relationship?: string | null
+          updated_at?: string
+          user_id?: string | null
+        }
+        Relationships: []
+      }
+      maintenance_tickets: {
+        Row: {
+          apartment_number: string | null
+          created_at: string | null
+          id: number
+          issue_description: string | null
+          priority_level: string | null
+          technician_name: string | null
+        }
+        Insert: {
+          apartment_number?: string | null
+          created_at?: string | null
+          id?: number
+          issue_description?: string | null
+          priority_level?: string | null
+          technician_name?: string | null
+        }
+        Update: {
+          apartment_number?: string | null
+          created_at?: string | null
+          id?: number
+          issue_description?: string | null
+          priority_level?: string | null
+          technician_name?: string | null
+        }
+        Relationships: []
+      }
       technicians: {
         Row: {
           created_at: string
@@ -78,6 +159,33 @@ export type Database = {
             referencedColumns: ["id"]
           },
         ]
+      }
+      ttickets: {
+        Row: {
+          call_summary: string | null
+          created_at: string | null
+          full_conversation: Json | null
+          id: string
+          issue_description: string | null
+          sentiment: string | null
+        }
+        Insert: {
+          call_summary?: string | null
+          created_at?: string | null
+          full_conversation?: Json | null
+          id?: string
+          issue_description?: string | null
+          sentiment?: string | null
+        }
+        Update: {
+          call_summary?: string | null
+          created_at?: string | null
+          full_conversation?: Json | null
+          id?: string
+          issue_description?: string | null
+          sentiment?: string | null
+        }
+        Relationships: []
       }
     }
     Views: {

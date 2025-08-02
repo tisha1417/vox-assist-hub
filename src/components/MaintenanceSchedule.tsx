@@ -5,13 +5,11 @@ import { Calendar, Wrench } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 
 interface Ticket {
-  id: string;
-  complaint: string;
-  building: string;
-  date: string;
-  priority: string;
+  id: number;
+  issue_description: string;
+  apartment_number: string;
+  priority_level: string;
   technician_name: string;
-  status: string;
   created_at: string;
 }
 
@@ -25,17 +23,38 @@ export const MaintenanceSchedule = ({ refreshTrigger }: MaintenanceScheduleProps
 
   useEffect(() => {
     fetchTickets();
+    
+    // Set up real-time subscription for maintenance_tickets
+    const channel = supabase
+      .channel('maintenance-tickets-changes')
+      .on(
+        'postgres_changes',
+        {
+          event: '*',
+          schema: 'public',
+          table: 'maintenance_tickets'
+        },
+        () => {
+          console.log('Maintenance ticket updated, refreshing...');
+          fetchTickets();
+        }
+      )
+      .subscribe();
+
+    return () => {
+      supabase.removeChannel(channel);
+    };
   }, [refreshTrigger]);
 
   const fetchTickets = async () => {
     setLoading(true);
     const { data, error } = await supabase
-      .from('tickets')
+      .from('maintenance_tickets')
       .select('*')
       .order('created_at', { ascending: false });
 
     if (error) {
-      console.error('Error fetching tickets:', error);
+      console.error('Error fetching maintenance tickets:', error);
     } else {
       setTickets(data || []);
     }
@@ -44,14 +63,13 @@ export const MaintenanceSchedule = ({ refreshTrigger }: MaintenanceScheduleProps
 
   const getPriorityColor = (priority: string) => {
     switch (priority) {
-      case 'P1':
+      case 'High':
+      case 'Critical':
         return 'destructive';
-      case 'P2':
+      case 'Medium':
         return 'secondary';
-      case 'P3':
+      case 'Low':
         return 'outline';
-      case 'P4':
-        return 'default';
       default:
         return 'default';
     }
@@ -59,17 +77,25 @@ export const MaintenanceSchedule = ({ refreshTrigger }: MaintenanceScheduleProps
 
   const getPriorityIcon = (priority: string) => {
     switch (priority) {
-      case 'P1':
+      case 'Critical':
         return '🔴';
-      case 'P2':
+      case 'High':
         return '🟡';
-      case 'P3':
+      case 'Medium':
         return '🟢';
-      case 'P4':
+      case 'Low':
         return '🔵';
       default:
         return '⚪';
     }
+  };
+
+  const formatDate = (dateString: string) => {
+    return new Date(dateString).toLocaleDateString('en-US', {
+      year: 'numeric',
+      month: '2-digit',
+      day: '2-digit'
+    });
   };
 
   if (loading) {
@@ -105,11 +131,10 @@ export const MaintenanceSchedule = ({ refreshTrigger }: MaintenanceScheduleProps
               <thead>
                 <tr className="border-b">
                   <th className="text-left p-3 font-semibold">Task</th>
-                  <th className="text-left p-3 font-semibold">Building</th>
+                  <th className="text-left p-3 font-semibold">Apartment</th>
                   <th className="text-left p-3 font-semibold">Date</th>
                   <th className="text-left p-3 font-semibold">Technician</th>
                   <th className="text-left p-3 font-semibold">Priority</th>
-                  <th className="text-left p-3 font-semibold">Status</th>
                 </tr>
               </thead>
               <tbody>
@@ -118,24 +143,19 @@ export const MaintenanceSchedule = ({ refreshTrigger }: MaintenanceScheduleProps
                     <td className="p-3">
                       <div className="flex items-center gap-2">
                         <Wrench className="h-4 w-4 text-muted-foreground" />
-                        <span className="font-medium">{ticket.complaint}</span>
+                        <span className="font-medium">{ticket.issue_description || 'No description'}</span>
                       </div>
                     </td>
-                    <td className="p-3 text-muted-foreground">{ticket.building}</td>
-                    <td className="p-3 text-muted-foreground">{ticket.date}</td>
-                    <td className="p-3 text-muted-foreground">{ticket.technician_name}</td>
+                    <td className="p-3 text-muted-foreground">{ticket.apartment_number || 'N/A'}</td>
+                    <td className="p-3 text-muted-foreground">{formatDate(ticket.created_at)}</td>
+                    <td className="p-3 text-muted-foreground">{ticket.technician_name || 'Unassigned'}</td>
                     <td className="p-3">
                       <Badge 
-                        variant={getPriorityColor(ticket.priority)}
+                        variant={getPriorityColor(ticket.priority_level || 'Low')}
                         className="flex items-center gap-1 w-fit"
                       >
-                        <span>{getPriorityIcon(ticket.priority)}</span>
-                        {ticket.priority}
-                      </Badge>
-                    </td>
-                    <td className="p-3">
-                      <Badge variant={ticket.status === 'open' ? 'secondary' : 'default'}>
-                        {ticket.status}
+                        <span>{getPriorityIcon(ticket.priority_level || 'Low')}</span>
+                        {ticket.priority_level || 'Low'}
                       </Badge>
                     </td>
                   </tr>
@@ -145,7 +165,7 @@ export const MaintenanceSchedule = ({ refreshTrigger }: MaintenanceScheduleProps
           </div>
         ) : (
           <div className="text-center py-8 text-muted-foreground">
-            No maintenance tickets found. Use the voice assistant to create a ticket.
+            No maintenance tickets found. Create tickets through the Omnidim agent.
           </div>
         )}
       </CardContent>

@@ -21,6 +21,27 @@ export const TechnicianHub = ({ refreshTrigger }: TechnicianHubProps) => {
 
   useEffect(() => {
     fetchTechnicians();
+    
+    // Set up real-time subscription for technicians
+    const channel = supabase
+      .channel('technicians-changes')
+      .on(
+        'postgres_changes',
+        {
+          event: '*',
+          schema: 'public',
+          table: 'technicians'
+        },
+        () => {
+          console.log('Technician status updated, refreshing...');
+          fetchTechnicians();
+        }
+      )
+      .subscribe();
+
+    return () => {
+      supabase.removeChannel(channel);
+    };
   }, [refreshTrigger]);
 
   const fetchTechnicians = async () => {
